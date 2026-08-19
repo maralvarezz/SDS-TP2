@@ -1,4 +1,4 @@
-﻿package ar.edu.itba.sds.tp2;
+package ar.edu.itba.sds.tp2;
 
 import ar.edu.itba.sds.model.Particle;
 

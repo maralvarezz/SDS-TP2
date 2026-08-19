@@ -18,7 +18,7 @@
     <dependencies>
         <dependency>
             <groupId>ar.edu.itba.sds</groupId>
-            <artifactId>sds-tp1-g8</artifactId>
+            <artifactId>sds-tp1</artifactId>
             <version>1.0-SNAPSHOT</version>
         </dependency>
 
