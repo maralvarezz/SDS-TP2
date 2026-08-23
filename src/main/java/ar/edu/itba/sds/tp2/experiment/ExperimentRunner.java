@@ -54,10 +54,21 @@ public final class ExperimentRunner {
 
     public List<ExperimentPoint> run(List<FlockingModel> models, List<Double> densities, List<Double> etas) {
         List<ExperimentPoint> points = new ArrayList<>();
+        int total = models.size() * densities.size() * etas.size();
+        int done = 0;
+
         for (FlockingModel model : models) {
             for (double rho : densities) {
                 for (double eta : etas) {
-                    points.add(runCombination(model, rho, eta));
+                    long start = System.nanoTime();
+                    ExperimentPoint point = runCombination(model, rho, eta);
+                    points.add(point);
+                    done++;
+                    double elapsedSeconds = (System.nanoTime() - start) / 1e9;
+                    System.out.printf(
+                            "[%d/%d] modelo=%-6s rho=%.4f eta=%.3f n=%d -> va=%.3f±%.3f S=%.3f±%.3f (%.1fs)%n",
+                            done, total, model, rho, eta, point.n(),
+                            point.meanVa(), point.stdVa(), point.meanS(), point.stdS(), elapsedSeconds);
                 }
             }
         }
@@ -95,7 +106,7 @@ public final class ExperimentRunner {
 
         if (missedSteadyState > 0) {
             System.err.printf(
-                    "[aviso] modelo=%s rho=%.4f eta=%.3f: %d/%d corridas no llegaron a estado estacionario en %d steps (se uso la mitad final como fallback)%n",
+                    "  [aviso] modelo=%s rho=%.4f eta=%.3f: %d/%d corridas no llegaron a estado estacionario en %d steps (se uso la mitad final como fallback)%n",
                     model, rho, eta, missedSteadyState, repetitions, steps);
         }
 

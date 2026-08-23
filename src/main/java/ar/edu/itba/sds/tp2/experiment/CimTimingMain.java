@@ -15,45 +15,70 @@ import java.util.Locale;
 import java.util.OptionalLong;
 
 /**
- * Punto (g) del enunciado: medir tiempos de ejecucion del CIM para N similares a los usados en
- * TP1, para poder compararlos.
+ * Punto (g) del enunciado: medir tiempos de ejecucion del CIM para compararlos con TP1.
  * <p>
- * A proposito usa los MISMOS parametros que el estudio de tiempos de TP1
- * (viz/time_analysis.py --variable n --values 20..100 --m 10 --l 20 --rc 1, ver README de TP1) en
- * vez de la config de bandadas de TP2 (L=10) -- lo que se quiere medir es el rendimiento del CIM
- * en si mismo, aislado del escenario fisico de Vicsek, para que la comparacion contra los
- * numeros que ya tiene TP1 sea directa.
+ * Para que la comparacion en escala log-log tenga sentido, se barre N en un rango amplio
+ * (10 a 5000, espaciado aprox. logaritmico) manteniendo la DENSIDAD fija en vez del lado L fijo:
+ * si L quedara fijo, al aumentar N tambien aumentaria la densidad de particulas, y el tiempo del
+ * CIM dejaria de reflejar solo el efecto de N (se sumaria el efecto de mas vecinos por particula).
+ * Con densidad fija, L y M escalan junto con N (L = L0*sqrt(N/N0), M = floor(M0*L/L0)) y el largo
+ * de celda se mantiene siempre por encima del minimo requerido.
+ * <p>
+ * El largo de celda minimo no es simplemente rc: como estas particulas tienen radio (no son
+ * puntuales, a diferencia del escenario de bandadas de TP2), ConfigValidator.validateGeometry de
+ * TP1 exige cellLength >= rc + 2*radiusMax = 1 + 2*0.26 = 1.52 (la interaccion se mide entre
+ * superficies, no entre centros). Los valores base (L0=20, M0=13, N0=100, rc=1) dan un largo de
+ * celda de ~1.54 en el punto de referencia, el M mas grande que TP1 acepta para L=20 con estos
+ * radios (confirmado por el propio mensaje de error de TP1: "M maximo permitido: 13").
  * <p>
  * Llama a CellIndexMethod.findNeighbours() directo (lo mismo que envuelve
  * SimulationEngine.findNeighbours() puertas adentro) para no meter overhead de mas en la
  * medicion.
+ * <p>
+ * Antes de medir en serio se hace un WARM-UP: se llama a findNeighbours varios miles de veces
+ * sobre un sistema descartable, sin registrar esos tiempos. Al correr las 90 mediciones dentro de
+ * un unico proceso Java (a diferencia de TP1, que lanza una JVM nueva por corrida), las primeras
+ * llamadas caen en modo interpretado -- el JIT de HotSpot todavia no compilo el codigo caliente --
+ * lo que antes se vio como tiempos anomalos (incluso no monotonos) justo en los N mas chicos. El
+ * warm-up hace que esa transicion ya haya pasado antes de que arranque la medicion real, para que
+ * la curva completa (desde N=10) sea representativa.
  */
 public final class CimTimingMain {
 
-    private static final double L = 20.0;
-    private static final int M = 10;
+    private static final double BASE_L = 20.0;
+    private static final int BASE_M = 13;
+    private static final int DENSITY_REFERENCE_N = 100;
     private static final double RC = 1.0;
-    private static final List<Integer> N_VALUES = List.of(20, 30, 40, 50, 60, 70, 80, 90, 100);
+    private static final double RADIUS_MIN = 0.23;
+    private static final double RADIUS_MAX = 0.26;
+    private static final List<Integer> N_VALUES = List.of(10, 20, 50, 100, 200, 500, 1000, 2000, 5000);
     private static final int RUNS_PER_VALUE = 10;
+    private static final int WARMUP_N = 200;
+    private static final int WARMUP_ITERATIONS = 5000;
 
     private CimTimingMain() {
     }
 
     public static void main(String[] args) throws IOException {
+        warmUp();
+
         List<String> lines = new ArrayList<>();
-        lines.add("n,run,elapsed_ns");
+        lines.add("n,run,l,m,elapsed_ns");
 
         for (int n : N_VALUES) {
+            double l = lFor(n);
+            int m = mFor(l);
+
             for (int run = 0; run < RUNS_PER_VALUE; run++) {
-                List<Particle> particles = randomParticles(n, run);
+                List<Particle> particles = randomParticles(n, l, m, run);
 
                 long start = System.nanoTime();
-                CellIndexMethod.findNeighbours(particles, L, M, RC, true);
+                CellIndexMethod.findNeighbours(particles, l, m, RC, true);
                 long elapsed = System.nanoTime() - start;
 
-                lines.add(String.format(Locale.US, "%d,%d,%d", n, run, elapsed));
+                lines.add(String.format(Locale.US, "%d,%d,%.4f,%d,%d", n, run, l, m, elapsed));
             }
-            System.out.println("n=" + n + " listo (" + RUNS_PER_VALUE + " corridas)");
+            System.out.println("n=" + n + " (l=" + l + ", m=" + m + ") listo (" + RUNS_PER_VALUE + " corridas)");
         }
 
         Path outputFile = Path.of("output/cim_timing_tp2.csv");
@@ -62,12 +87,36 @@ public final class CimTimingMain {
         }
         Files.write(outputFile, lines);
         System.out.println("Tiempos escritos en " + outputFile.toAbsolutePath());
-        System.out.println("Comparar contra los tiempos de TP1 con los mismos parametros (l=20 m=10 rc=1)");
+        System.out.println("Comparar con TP1: correr viz/time_analysis.py una vez por cada N con L y M escalados "
+                + "a la misma densidad (ver README/instrucciones), y despues viz/compare_cim_timing.py");
     }
 
-    private static List<Particle> randomParticles(int n, int seedOffset) {
+    private static void warmUp() {
+        double l = lFor(WARMUP_N);
+        int m = mFor(l);
+        List<Particle> particles = randomParticles(WARMUP_N, l, m, -1);
+
+        for (int i = 0; i < WARMUP_ITERATIONS; i++) {
+            CellIndexMethod.findNeighbours(particles, l, m, RC, true);
+        }
+        System.out.println("Warm-up completo (" + WARMUP_ITERATIONS + " llamadas con n=" + WARMUP_N + ")");
+    }
+
+    private static double lFor(int n) {
+        return round4(BASE_L * Math.sqrt(n / (double) DENSITY_REFERENCE_N));
+    }
+
+    private static int mFor(double l) {
+        return Math.max(1, (int) Math.floor(BASE_M * l / BASE_L + 1e-12));
+    }
+
+    private static double round4(double value) {
+        return Math.round(value * 10_000.0) / 10_000.0;
+    }
+
+    private static List<Particle> randomParticles(int n, double l, int m, int seedOffset) {
         SimulationConfig config = new SimulationConfig(
-                n, L, M, RC, 0.0, 0.0, true, OptionalLong.of(1000L + seedOffset), "random",
+                n, l, m, RC, RADIUS_MIN, RADIUS_MAX, true, OptionalLong.of(1000L + seedOffset), "random",
                 Path.of("unused"), Path.of("unused"), Path.of("unused"), Path.of("unused"),
                 1, false, "python3", Path.of("unused"), Path.of("unused"), Path.of("unused")
         );
