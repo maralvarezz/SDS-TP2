@@ -6,6 +6,7 @@ import ar.edu.itba.sds.tp2.config.FlockingConfigLoader;
 import ar.edu.itba.sds.tp2.engine.SimulationEngine;
 import ar.edu.itba.sds.tp2.generator.FlockingParticleGenerator;
 import ar.edu.itba.sds.tp2.io.ObservablesWriter;
+import ar.edu.itba.sds.tp2.io.TrajectoryWriter;
 import ar.edu.itba.sds.tp2.observable.ClusterAnalyzer;
 import ar.edu.itba.sds.tp2.observable.Polarization;
 import ar.edu.itba.sds.tp2.rule.DirectionRule;
@@ -52,15 +53,19 @@ public final class Main {
         SimulationEngine engine = new SimulationEngine(config, rule, random);
         List<Particle> state = FlockingParticleGenerator.generateInitialState(config);
 
+        Path trajectoryFile = Path.of("output/trajectory.txt");
         List<ObservablesWriter.Row> rows = new ArrayList<>(config.steps() + 1);
-        for (int t = 0; t <= config.steps(); t++) {
-            Map<Integer, Set<Integer>> neighbours = engine.findNeighbours(state);
-            double va = Polarization.compute(state);
-            double s = ClusterAnalyzer.giantComponentFraction(neighbours);
-            rows.add(new ObservablesWriter.Row(t, va, s));
+        try (TrajectoryWriter trajectoryWriter = new TrajectoryWriter(trajectoryFile, config)) {
+            for (int t = 0; t <= config.steps(); t++) {
+                Map<Integer, Set<Integer>> neighbours = engine.findNeighbours(state);
+                double va = Polarization.compute(state);
+                double s = ClusterAnalyzer.giantComponentFraction(neighbours);
+                rows.add(new ObservablesWriter.Row(t, va, s));
+                trajectoryWriter.writeFrame(t, state);
 
-            if (t < config.steps()) {
-                state = engine.step(state, neighbours);
+                if (t < config.steps()) {
+                    state = engine.step(state, neighbours);
+                }
             }
         }
 
@@ -71,7 +76,9 @@ public final class Main {
         System.out.printf("Corrida terminada: modelo=%s rho=%.2f n=%d eta=%.3f steps=%d%n",
                 config.model(), rho, config.n(), config.eta(), config.steps());
         System.out.println("Observables escritos en " + outputFile.toAbsolutePath());
+        System.out.println("Trayectoria escrita en " + trajectoryFile.toAbsolutePath());
         System.out.println("Graficar con: python3 viz/plot_observables.py " + outputFile);
+        System.out.println("Animar con: python3 viz/animate_trajectory.py " + trajectoryFile);
     }
 
     private static DirectionRule ruleFor(FlockingConfig config) {

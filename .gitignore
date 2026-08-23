@@ -1,6 +1,23 @@
+# Java / Maven
 target/
+*.class
+
+# IDE / sistema operativo
 .idea/
 *.iml
+.DS_Store
 
+# Resultados generados: CSV, figuras y animaciones
 output/
+viz/output/
+viz/generated/
+
+# Python
 __pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# Entornos virtuales locales
+.venv/
+venv/
