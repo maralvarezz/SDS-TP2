@@ -1,5 +1,7 @@
 """Estilo compartido por los gráficos finales."""
 
+from __future__ import annotations
+
 from pathlib import Path
 import math
 import matplotlib.pyplot as plt

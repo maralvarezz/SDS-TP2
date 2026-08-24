@@ -42,8 +42,14 @@ public final class ExperimentMain {
     private static final List<Double> QUICK_ETAS = List.of(0.0, 1.0, 2.0, 3.0, 4.0, 5.0);
     private static final List<FlockingModel> MODELS = List.of(FlockingModel.VICSEK, FlockingModel.VOTER);
 
-    // Ventana de 50 pasos, pendiente < 0.001, 5 ventanas seguidas por debajo del umbral.
-    private static final SteadyStateDetector STEADY_STATE_DETECTOR = new SteadyStateDetector(50, 1e-3, 5);
+    // Ventana de 50 pasos, pendiente < 0.001, 5 ventanas seguidas por debajo del umbral,
+    // desvio de ventana < 0.05 y promedio de ventana a menos de 0.1 del promedio de la cola
+    // final de la corrida (ver SteadyStateDetector para el porque de cada numero: calibrado
+    // el 24/08 con dos casos reales, votante rho=8/eta=0 -- que revelo que pendiente+desvio
+    // solos no alcanzan por las mesetas locales del voter model -- y vicsek rho=4/eta=2 -- que
+    // dio el rango real de ruido a esperar en un caso con eta>0 genuino).
+    private static final SteadyStateDetector STEADY_STATE_DETECTOR =
+            new SteadyStateDetector(50, 1e-3, 5, 0.05, 0.1);
 
     private ExperimentMain() {
     }

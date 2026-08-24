@@ -43,12 +43,43 @@ python3 viz/plot_va_vs_s.py output/experiments_polarization.csv \
   output/experiments_clusters.csv --out output/figures/va_vs_s.png
 ```
 
-Para el punto g se usa la serie `free` del CSV crudo de TP1, que corresponde a `L=20` y `M=10`,
-junto con el contrato exacto `n,run,elapsed_ns` de TP2:
+Para el punto g la comparación es a **densidad fija**, no a L fijo: con L constante, al crecer
+N también crece la densidad y el tiempo del CIM deja de reflejar solo el efecto de N, y con
+partículas de radio (0.23–0.26) se vuelve geométricamente imposible de empaquetar a N grande. Por
+eso TP1 se corre una vez POR CADA N con L y M ya escalados a la misma densidad de referencia
+(N0=100, L0=20 → ρ=0.25; los valores de L y M por N están en el javadoc de `CimTimingMain`), sin
+`--compare-density`:
 
 ```bash
-python3 viz/plot_cim_comparison.py /ruta/al/time_N_runs.csv \
-  output/cim_timing_tp2.csv --out output/figures/cim_tp1_vs_tp2.png
+cd ../SDS-TP1
+python3 viz/time_analysis.py --variable n --values 10   --runs-per-value 10 --m 4  --l 6.3246   --rc 1 --periodic --compile
+python3 viz/time_analysis.py --variable n --values 20   --runs-per-value 10 --m 5  --l 8.9443   --rc 1 --periodic
+python3 viz/time_analysis.py --variable n --values 50   --runs-per-value 10 --m 9  --l 14.1421  --rc 1 --periodic
+python3 viz/time_analysis.py --variable n --values 100  --runs-per-value 10 --m 13 --l 20.0000  --rc 1 --periodic
+python3 viz/time_analysis.py --variable n --values 200  --runs-per-value 10 --m 18 --l 28.2843  --rc 1 --periodic
+python3 viz/time_analysis.py --variable n --values 500  --runs-per-value 10 --m 29 --l 44.7214  --rc 1 --periodic
+python3 viz/time_analysis.py --variable n --values 1000 --runs-per-value 10 --m 41 --l 63.2456  --rc 1 --periodic
+python3 viz/time_analysis.py --variable n --values 2000 --runs-per-value 10 --m 58 --l 89.4427  --rc 1 --periodic
+python3 viz/time_analysis.py --variable n --values 5000 --runs-per-value 10 --m 91 --l 141.4214 --rc 1 --periodic
+```
+
+(solo el primer comando necesita `--compile`; genera 9 carpetas separadas en
+`output/figures/time_N_*/`). Del lado de TP2, `CimTimingMain` corre el mismo barrido de N con un
+warm-up previo para que el tiempo no arrastre ruido de compilación JIT:
+
+```bash
+cd ../SDS-TP2
+mvn compile exec:java -Dexec.mainClass="ar.edu.itba.sds.tp2.experiment.CimTimingMain"
+```
+
+Y el gráfico, en escala log-log, con la pendiente del ajuste de potencia de cada curva anotada en
+la leyenda (≈1 confirma la complejidad O(N) esperada del CIM):
+
+```bash
+python3 viz/compare_cim_timing.py \
+  --tp1-runs ../SDS-TP1/output/figures/time_N_*/time_N_*_runs.csv \
+  --tp2-runs output/cim_timing_tp2.csv \
+  --out output/figures/cim_timing_comparison_loglog.png
 ```
 
 ## Dependencias y pruebas

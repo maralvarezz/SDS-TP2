@@ -152,7 +152,14 @@ public final class ExperimentRunner {
      * independientes de verdad).
      */
     private static long seedFor(FlockingModel model, double rho, double eta, int rep) {
-        return Objects.hash(model, rho, eta, rep);
+        // OJO: usar model.name() y NO el enum model directamente. Enum no overridea hashCode(),
+        // asi que Object.hashCode() por defecto es el identity hash, que la JVM NO garantiza
+        // estable entre corridas -- encontrado el 24/08 corriendo el mismo comando dos veces
+        // seguidas y viendo semillas distintas cada vez (por eso los resultados no eran
+        // reproducibles corrida a corrida, mas notorio en los casos cerca de una transicion,
+        // donde la dinamica es sensible a la condicion inicial). String.hashCode() si esta
+        // definido por spec (deterministico), asi que con .name() la semilla queda reproducible.
+        return Objects.hash(model.name(), rho, eta, rep);
     }
 
     private static double average(List<Double> series, int fromIndexInclusive) {
