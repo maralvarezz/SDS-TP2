@@ -109,4 +109,43 @@ public final class FlockingParticleGenerator {
                 Path.of("unused")
         );
     }
+    /**
+     * Estado inicial alternativo, SOLO para demos/animaciones (no se usa en ExperimentRunner ni
+     * en CimTimingMain, que siguen con generateInitialState tal cual estaban). En vez de tirar
+     * las N particulas al azar en toda la caja, arma DOS masas compactas -- una pegada al borde
+     * izquierdo moviendose hacia la derecha (angulo ~0) y otra pegada al borde derecho moviendose
+     * hacia la izquierda (angulo ~pi) -- para que la animacion muestre un choque/fusion de dos
+     * bandadas en vez de particulas dispersas desde el arranque. Particulas puntuales (radius=0,
+     * como en el resto de TP2), asi que no hace falta rechazo por superposicion.
+     */
+    public static List<Particle> generateCollidingClusters(FlockingConfig config) {
+        Random random = config.seed().isPresent() ? new Random(config.seed().getAsLong()) : new Random();
+        double l = config.l();
+        int n = config.n();
+        int leftCount = n / 2;
+        int rightCount = n - leftCount;
+
+        List<Particle> particles = new ArrayList<>(n);
+        int id = 0;
+        for (int i = 0; i < leftCount; i++) {
+            particles.add(randomParticleInBand(random, id++, l, 0.05, 0.35, 0.0));
+        }
+        for (int i = 0; i < rightCount; i++) {
+            particles.add(randomParticleInBand(random, id++, l, 0.65, 0.95, Math.PI));
+        }
+        return List.copyOf(particles);
+    }
+
+    /**
+     * Una particula puntual con x uniforme en [xFracMin*l, xFracMax*l], y uniforme en [0, l], y
+     * angulo inicial uniforme en [baseAngle - 0.4, baseAngle + 0.4] (un poco de dispersion para
+     * que no arranque como un bloque perfectamente rigido, pero se nota claramente hacia donde
+     * viaja cada masa).
+     */
+    private static Particle randomParticleInBand(Random random, int id, double l, double xFracMin, double xFracMax, double baseAngle) {
+        double x = l * (xFracMin + random.nextDouble() * (xFracMax - xFracMin));
+        double y = random.nextDouble() * l;
+        double theta = baseAngle + (random.nextDouble() * 2 - 1) * 0.4;
+        return new Particle(id, x, y, 0.0, theta);
+    }
 }
