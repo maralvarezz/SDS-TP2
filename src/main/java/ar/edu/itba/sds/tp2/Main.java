@@ -31,7 +31,8 @@ import java.util.Set;
  * entra en estado estacionario (punto b del enunciado). Todavia no es el runner que barre
  * modelo x densidad x eta -- eso es la proxima capa.
  * <p>
- * Acepta un flag extra, --generator=random|clusters (default random), que NO pasa por
+ * Acepta un flag extra, --initial-state=random|colliding (o --generator=random|clusters,
+ * por compatibilidad; default random), que NO pasa por
  * FlockingConfigLoader (se saca de los args antes) porque no es un parametro fisico del
  * enunciado -- es solo para elegir el estado inicial:
  * - random (default): el de siempre, N particulas dispersas al azar en toda la caja. Es lo que
@@ -60,13 +61,12 @@ public final class Main {
         List<String> remainingArgs = new ArrayList<>();
         for (String arg : args) {
             if (arg.startsWith("--generator=")) {
-                generator = arg.substring("--generator=".length());
+                generator = normalizeGenerator(arg.substring("--generator=".length()));
+            } else if (arg.startsWith("--initial-state=")) {
+                generator = normalizeGenerator(arg.substring("--initial-state=".length()));
             } else {
                 remainingArgs.add(arg);
             }
-        }
-        if (!generator.equals("random") && !generator.equals("clusters")) {
-            throw new IllegalArgumentException("--generator debe ser 'random' o 'clusters', recibido: " + generator);
         }
 
         FlockingConfig config = FlockingConfigLoader.load(remainingArgs.toArray(new String[0]));
@@ -110,6 +110,15 @@ public final class Main {
         return switch (config.model()) {
             case VICSEK -> new VicsekAverageRule();
             case VOTER -> new VoterRule();
+        };
+    }
+
+    private static String normalizeGenerator(String value) {
+        return switch (value.toLowerCase()) {
+            case "random" -> "random";
+            case "clusters", "colliding", "colliding-clusters", "two-flocks" -> "clusters";
+            default -> throw new IllegalArgumentException(
+                    "--initial-state debe ser 'random' o 'colliding', recibido: " + value);
         };
     }
 }

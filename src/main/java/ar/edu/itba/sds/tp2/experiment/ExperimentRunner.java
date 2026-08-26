@@ -31,6 +31,11 @@ import java.util.Set;
  */
 public final class ExperimentRunner {
 
+    public enum InitialStateMode {
+        RANDOM,
+        COLLIDING
+    }
+
     private final double l;
     private final double rc;
     private final double v0;
@@ -38,10 +43,18 @@ public final class ExperimentRunner {
     private final int steps;
     private final int repetitions;
     private final SteadyStateDetector steadyStateDetector;
+    private final InitialStateMode initialStateMode;
 
     public ExperimentRunner(
             double l, double rc, double v0, double dt, int steps, int repetitions,
             SteadyStateDetector steadyStateDetector
+    ) {
+        this(l, rc, v0, dt, steps, repetitions, steadyStateDetector, InitialStateMode.RANDOM);
+    }
+
+    public ExperimentRunner(
+            double l, double rc, double v0, double dt, int steps, int repetitions,
+            SteadyStateDetector steadyStateDetector, InitialStateMode initialStateMode
     ) {
         this.l = l;
         this.rc = rc;
@@ -50,6 +63,7 @@ public final class ExperimentRunner {
         this.steps = steps;
         this.repetitions = repetitions;
         this.steadyStateDetector = steadyStateDetector;
+        this.initialStateMode = initialStateMode;
     }
 
     public List<ExperimentPoint> run(List<FlockingModel> models, List<Double> densities, List<Double> etas) {
@@ -121,7 +135,7 @@ public final class ExperimentRunner {
         Random random = new Random(config.seed().getAsLong());
         DirectionRule rule = ruleFor(config.model());
         SimulationEngine engine = new SimulationEngine(config, rule, random);
-        List<Particle> state = FlockingParticleGenerator.generateInitialState(config);
+        List<Particle> state = initialStateFor(config);
 
         List<Double> va = new ArrayList<>(config.steps() + 1);
         List<Double> s = new ArrayList<>(config.steps() + 1);
@@ -137,6 +151,13 @@ public final class ExperimentRunner {
     }
 
     private record RunResult(List<Double> va, List<Double> s) {
+    }
+
+    private List<Particle> initialStateFor(FlockingConfig config) {
+        return switch (initialStateMode) {
+            case RANDOM -> FlockingParticleGenerator.generateInitialState(config);
+            case COLLIDING -> FlockingParticleGenerator.generateCollidingClusters(config);
+        };
     }
 
     private static DirectionRule ruleFor(FlockingModel model) {

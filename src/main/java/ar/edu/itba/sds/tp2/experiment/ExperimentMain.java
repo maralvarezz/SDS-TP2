@@ -21,6 +21,8 @@ import java.util.List;
  *   --quick               steps=300, repetitions=1, eta en 6 puntos en vez de 11 (prueba end-to-end rapida)
  *   --steps=N             pisa DEFAULT_STEPS
  *   --repetitions=N       pisa DEFAULT_REPETITIONS
+ *   --initial-state=MODE  random o colliding
+ *   --model=MODEL         VICSEK, VOTER o ALL
  * </pre>
  * Las dos listas de densidad son intencionalmente distintas: {2,4,8} para el estudio general
  * (polarizacion, puntos b/c), {1/pi, 1/(2pi), 1/(3pi)} para el estudio de clusters (punto d y el
@@ -58,6 +60,8 @@ public final class ExperimentMain {
         int steps = DEFAULT_STEPS;
         int repetitions = DEFAULT_REPETITIONS;
         List<Double> etas = DEFAULT_ETAS;
+        List<FlockingModel> models = MODELS;
+        ExperimentRunner.InitialStateMode initialStateMode = ExperimentRunner.InitialStateMode.RANDOM;
 
         for (String arg : args) {
             if (arg.equals("--quick")) {
@@ -68,25 +72,48 @@ public final class ExperimentMain {
                 steps = Integer.parseInt(arg.substring("--steps=".length()));
             } else if (arg.startsWith("--repetitions=")) {
                 repetitions = Integer.parseInt(arg.substring("--repetitions=".length()));
+            } else if (arg.startsWith("--initial-state=")) {
+                initialStateMode = parseInitialStateMode(arg.substring("--initial-state=".length()));
+            } else if (arg.startsWith("--model=")) {
+                models = parseModels(arg.substring("--model=".length()));
             } else {
                 throw new IllegalArgumentException(
-                        "Argumento desconocido: " + arg + " (usar --quick, --steps=N, --repetitions=N)");
+                        "Argumento desconocido: " + arg
+                                + " (usar --quick, --steps=N, --repetitions=N, --initial-state=random|colliding, --model=VICSEK|VOTER|ALL)");
             }
         }
 
-        System.out.printf("Config: steps=%d repetitions=%d etas=%d valores%n", steps, repetitions, etas.size());
-        ExperimentRunner runner = new ExperimentRunner(L, RC, V0, DT, steps, repetitions, STEADY_STATE_DETECTOR);
+        System.out.printf("Config: steps=%d repetitions=%d etas=%d valores initialState=%s models=%s%n",
+                steps, repetitions, etas.size(), initialStateMode, models);
+        ExperimentRunner runner = new ExperimentRunner(
+                L, RC, V0, DT, steps, repetitions, STEADY_STATE_DETECTOR, initialStateMode);
 
         System.out.println("=== Barrido de polarizacion (rho=2,4,8) ===");
-        List<ExperimentPoint> polarizationResults = runner.run(MODELS, POLARIZATION_DENSITIES, etas);
+        List<ExperimentPoint> polarizationResults = runner.run(models, POLARIZATION_DENSITIES, etas);
         Path polarizationOut = Path.of("output/experiments_polarization.csv");
         ExperimentResultsWriter.write(polarizationOut, polarizationResults);
         System.out.println(polarizationResults.size() + " combinaciones -> " + polarizationOut);
 
         System.out.println("=== Barrido de clusters (rho=1/pi, 1/2pi, 1/3pi) ===");
-        List<ExperimentPoint> clusterResults = runner.run(MODELS, CLUSTER_DENSITIES, etas);
+        List<ExperimentPoint> clusterResults = runner.run(models, CLUSTER_DENSITIES, etas);
         Path clusterOut = Path.of("output/experiments_clusters.csv");
         ExperimentResultsWriter.write(clusterOut, clusterResults);
         System.out.println(clusterResults.size() + " combinaciones -> " + clusterOut);
+    }
+
+    private static ExperimentRunner.InitialStateMode parseInitialStateMode(String value) {
+        return switch (value.toLowerCase()) {
+            case "random" -> ExperimentRunner.InitialStateMode.RANDOM;
+            case "colliding", "colliding-clusters", "two-flocks" -> ExperimentRunner.InitialStateMode.COLLIDING;
+            default -> throw new IllegalArgumentException(
+                    "initial-state debe ser random o colliding, recibido: " + value);
+        };
+    }
+
+    private static List<FlockingModel> parseModels(String value) {
+        if (value.equalsIgnoreCase("all")) {
+            return MODELS;
+        }
+        return List.of(FlockingModel.valueOf(value.toUpperCase()));
     }
 }
