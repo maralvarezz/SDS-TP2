@@ -20,6 +20,11 @@ import java.util.OptionalInt;
 import java.util.OptionalLong;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Barre modelo x densidad x eta, corriendo `repetitions` simulaciones independientes por
@@ -28,6 +33,21 @@ import java.util.Set;
  * <p>
  * L, rc, v0, dt, steps y la cantidad de repeticiones son los mismos para todas las combinaciones
  * de una corrida del runner -- lo que varia es modelo/densidad/eta, que se pasan en run().
+ * <p>
+ * fixedStationaryStart, si esta presente, bypassea el SteadyStateDetector y promedia siempre
+ * desde ese paso fijo -- pensado unicamente para comparar contra otros grupos que usan un
+ * cutoff fijo en vez de deteccion dinamica (misma logica que su --stationary-from + --no-dynamic).
+ * El barrido "de verdad" del informe no debe usar esto, para eso queda vacio (OptionalInt.empty()).
+ * <p>
+ * run() paraleliza las combinaciones (model, rho, eta) entre los nucleos disponibles -- cada
+ * combinacion es completamente independiente (semilla propia via seedFor(), motor de simulacion
+ * propio, sin ningun estado mutable compartido: verificado que SimulationEngine, CellIndexMethod
+ * de TP1 y SteadyStateDetector son todos statelesss/inmutables entre llamadas), asi que no hay
+ * ningun riesgo de condicion de carrera ni de resultados no deterministicos por el paralelismo:
+ * la semilla de cada combinacion depende solo de (model, rho, eta, rep), nunca del orden ni del
+ * hilo en que se ejecuta. Antes esto corria secuencial en un solo hilo -- con 330 combinaciones
+ * de 5000 steps cada una eso significaba varias horas en vez de los ~1h que le tomo a otro grupo
+ * corriendo en paralelo con su propio runner.
  */
 public final class ExperimentRunner {
 
@@ -44,17 +64,26 @@ public final class ExperimentRunner {
     private final int repetitions;
     private final SteadyStateDetector steadyStateDetector;
     private final InitialStateMode initialStateMode;
+    private final OptionalInt fixedStationaryStart;
 
     public ExperimentRunner(
             double l, double rc, double v0, double dt, int steps, int repetitions,
             SteadyStateDetector steadyStateDetector
     ) {
-        this(l, rc, v0, dt, steps, repetitions, steadyStateDetector, InitialStateMode.RANDOM);
+        this(l, rc, v0, dt, steps, repetitions, steadyStateDetector, InitialStateMode.RANDOM, OptionalInt.empty());
     }
 
     public ExperimentRunner(
             double l, double rc, double v0, double dt, int steps, int repetitions,
             SteadyStateDetector steadyStateDetector, InitialStateMode initialStateMode
+    ) {
+        this(l, rc, v0, dt, steps, repetitions, steadyStateDetector, initialStateMode, OptionalInt.empty());
+    }
+
+    public ExperimentRunner(
+            double l, double rc, double v0, double dt, int steps, int repetitions,
+            SteadyStateDetector steadyStateDetector, InitialStateMode initialStateMode,
+            OptionalInt fixedStationaryStart
     ) {
         this.l = l;
         this.rc = rc;
@@ -64,29 +93,59 @@ public final class ExperimentRunner {
         this.repetitions = repetitions;
         this.steadyStateDetector = steadyStateDetector;
         this.initialStateMode = initialStateMode;
+        this.fixedStationaryStart = fixedStationaryStart;
+    }
+
+    private record Combo(FlockingModel model, double rho, double eta) {
     }
 
     public List<ExperimentPoint> run(List<FlockingModel> models, List<Double> densities, List<Double> etas) {
-        List<ExperimentPoint> points = new ArrayList<>();
-        int total = models.size() * densities.size() * etas.size();
-        int done = 0;
-
+        List<Combo> combos = new ArrayList<>();
         for (FlockingModel model : models) {
             for (double rho : densities) {
                 for (double eta : etas) {
-                    long start = System.nanoTime();
-                    ExperimentPoint point = runCombination(model, rho, eta);
-                    points.add(point);
-                    done++;
-                    double elapsedSeconds = (System.nanoTime() - start) / 1e9;
-                    System.out.printf(
-                            "[%d/%d] modelo=%-6s rho=%.4f eta=%.3f n=%d -> va=%.3f±%.3f S=%.3f±%.3f (%.1fs)%n",
-                            done, total, model, rho, eta, point.n(),
-                            point.meanVa(), point.stdVa(), point.meanS(), point.stdS(), elapsedSeconds);
+                    combos.add(new Combo(model, rho, eta));
                 }
             }
         }
-        return points;
+        int total = combos.size();
+        AtomicInteger done = new AtomicInteger(0);
+
+        // Deja un nucleo libre para que la maquina siga usable mientras corre el barrido.
+        int threads = Math.max(1, Runtime.getRuntime().availableProcessors() - 1);
+        System.out.printf("Paralelizando %d combinaciones en %d hilos (de %d nucleos disponibles)%n",
+                total, threads, Runtime.getRuntime().availableProcessors());
+        ExecutorService executor = Executors.newFixedThreadPool(threads);
+        try {
+            List<Future<ExperimentPoint>> futures = new ArrayList<>(combos.size());
+            for (Combo combo : combos) {
+                futures.add(executor.submit(() -> {
+                    long start = System.nanoTime();
+                    ExperimentPoint point = runCombination(combo.model(), combo.rho(), combo.eta());
+                    double elapsedSeconds = (System.nanoTime() - start) / 1e9;
+                    int index = done.incrementAndGet();
+                    synchronized (System.out) {
+                        System.out.printf(
+                                "[%d/%d] modelo=%-6s rho=%.4f eta=%.3f n=%d -> va=%.3f±%.3f S=%.3f±%.3f (%.1fs)%n",
+                                index, total, combo.model(), combo.rho(), combo.eta(), point.n(),
+                                point.meanVa(), point.stdVa(), point.meanS(), point.stdS(), elapsedSeconds);
+                    }
+                    return point;
+                }));
+            }
+            List<ExperimentPoint> points = new ArrayList<>(combos.size());
+            for (Future<ExperimentPoint> future : futures) {
+                points.add(future.get());
+            }
+            return points;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Interrumpido esperando resultados del barrido", e);
+        } catch (ExecutionException e) {
+            throw new RuntimeException("Fallo una combinacion del barrido", e.getCause());
+        } finally {
+            executor.shutdown();
+        }
     }
 
     private ExperimentPoint runCombination(FlockingModel model, double rho, double eta) {
@@ -101,17 +160,22 @@ public final class ExperimentRunner {
             n = config.n();
 
             RunResult result = runSingle(config);
-            OptionalInt stationaryStart = steadyStateDetector.detect(result.va());
             int start;
-            if (stationaryStart.isPresent()) {
-                start = stationaryStart.getAsInt();
+            if (fixedStationaryStart.isPresent()) {
+                // Comparacion en igualdad de condiciones con otro grupo: sin deteccion, cutoff fijo.
+                start = Math.min(fixedStationaryStart.getAsInt(), Math.max(0, result.va().size() - 1));
             } else {
-                // No se detecto estacionario dentro de los steps configurados -- probablemente
-                // falten pasos para esta combinacion (tipico en densidades bajas o eta cerca de
-                // la transicion). Fallback: promediar la segunda mitad de la corrida, pero avisar
-                // para que quede claro que ese punto necesita revision/mas steps.
-                start = result.va().size() / 2;
-                missedSteadyState++;
+                OptionalInt stationaryStart = steadyStateDetector.detect(result.va());
+                if (stationaryStart.isPresent()) {
+                    start = stationaryStart.getAsInt();
+                } else {
+                    // No se detecto estacionario dentro de los steps configurados -- probablemente
+                    // falten pasos para esta combinacion (tipico en densidades bajas o eta cerca de
+                    // la transicion). Fallback: promediar la segunda mitad de la corrida, pero avisar
+                    // para que quede claro que ese punto necesita revision/mas steps.
+                    start = result.va().size() / 2;
+                    missedSteadyState++;
+                }
             }
 
             vaSamples.add(average(result.va(), start));
@@ -119,9 +183,11 @@ public final class ExperimentRunner {
         }
 
         if (missedSteadyState > 0) {
-            System.err.printf(
-                    "  [aviso] modelo=%s rho=%.4f eta=%.3f: %d/%d corridas no llegaron a estado estacionario en %d steps (se uso la mitad final como fallback)%n",
-                    model, rho, eta, missedSteadyState, repetitions, steps);
+            synchronized (System.err) {
+                System.err.printf(
+                        "  [aviso] modelo=%s rho=%.4f eta=%.3f: %d/%d corridas no llegaron a estado estacionario en %d steps (se uso la mitad final como fallback)%n",
+                        model, rho, eta, missedSteadyState, repetitions, steps);
+            }
         }
 
         return new ExperimentPoint(
@@ -170,7 +236,8 @@ public final class ExperimentRunner {
     /**
      * Semilla deterministica a partir de la combinacion -- reproducible entre corridas del
      * runner, pero distinta por repeticion (para que las repeticiones sean realizaciones
-     * independientes de verdad).
+     * independientes de verdad). Depende SOLO de (model, rho, eta, rep), nunca del hilo ni del
+     * orden de ejecucion -- por eso paralelizar run() no cambia ni un solo resultado.
      */
     private static long seedFor(FlockingModel model, double rho, double eta, int rep) {
         // OJO: usar model.name() y NO el enum model directamente. Enum no overridea hashCode(),

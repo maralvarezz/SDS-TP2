@@ -95,7 +95,14 @@ def read_trajectory(path: Path):
     return metadata, [(t, frames[t]) for t in times]
 
 
-def read_experiments(paths: list[Path]):
+def read_experiments(paths: list[Path], required_models: tuple[str, ...] | None = None):
+    """Lee y valida uno o mas CSV de experimentos.
+
+    required_models restringe que modelos deben estar presentes -- por default (None) exige
+    los dos (MODELS = VICSEK y VOTER), como en el barrido real del informe. Para comparaciones
+    puntuales que solo corrieron un modelo (ej. contra otro grupo que solo mandan "standard"),
+    se puede pasar required_models=("VICSEK",) y no va a exigir filas de VOTER que no existen.
+    """
     parsed_rows = []
     seen = set()
     for path in paths:
@@ -117,7 +124,8 @@ def read_experiments(paths: list[Path]):
             parsed_rows.append(parsed)
     if not parsed_rows:
         raise ValueError("Los archivos de experimentos no contienen filas")
-    missing_models = set(MODELS) - {row["model"] for row in parsed_rows}
+    expected_models = MODELS if required_models is None else required_models
+    missing_models = set(expected_models) - {row["model"] for row in parsed_rows}
     if missing_models:
         raise ValueError(f"Faltan modelos en los experimentos: {sorted(missing_models)}")
     return parsed_rows
