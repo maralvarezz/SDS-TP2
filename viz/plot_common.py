@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import math
+import re
 import matplotlib.pyplot as plt
 
 plt.rcParams.update({"font.size": 13, "axes.titlesize": 15, "axes.labelsize": 13,
@@ -30,6 +31,31 @@ def density_color(rho, densities):
         if abs(rho - value) < 1e-6:
             return _DENSITY_PALETTE[index % len(_DENSITY_PALETTE)]
     return _DENSITY_PALETTE[0]
+
+
+def parse_rho_list(value):
+    """Parsea una lista de densidades separadas por coma para --rho, ej. '2,8,1/pi,1/3pi' o
+    '2,8,1/(3pi)'. Acepta numeros comunes (2, 4.5) y fracciones de pi con divisor entero
+    opcional (1/pi, 1/2pi, 1/3pi, 1/(3pi), todas equivalentes salvo el divisor). Se usa para
+    restringir un panel a un subconjunto puntual de las densidades ya cargadas por --densities,
+    sin tener que agregar un modo de --densities nuevo por cada combinacion posible."""
+    values = []
+    for token in value.split(","):
+        token = token.strip().lower().replace(" ", "")
+        if not token:
+            continue
+        match = re.fullmatch(r"1/\(?(\d*)pi\)?", token)
+        if match:
+            divisor = int(match.group(1)) if match.group(1) else 1
+            values.append(1 / (divisor * math.pi))
+            continue
+        try:
+            values.append(float(token))
+        except ValueError as error:
+            raise ValueError(f"Valor de densidad invalido en --rho: {token!r}") from error
+    if not values:
+        raise ValueError("--rho no puede quedar vacio")
+    return values
 
 
 def density_label(rho):
