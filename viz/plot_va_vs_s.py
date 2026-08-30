@@ -101,28 +101,26 @@ def main():
             axes_flat[0].set_ylabel(r"Polarización $v_a$")
             axes_flat[-1].legend(frameon=False)
     else:
+        # Un solo modelo: TODAS las densidades pedidas van juntas en un unico panel.
         model = selected_models[0]
-        fig, axes = plt.subplots(1, len(groups), figsize=(6.5 * len(groups), 5.8), squeeze=False)
-        axes = axes[0]
-        for ax, (title, densities) in zip(axes, groups):
-            for rho in densities:
-                density_rows = rows_for_density(rows, rho)
-                selected = sorted((row for row in density_rows if row["model"] == model), key=lambda row: row["eta"])
-                if not selected:
-                    sys.exit(f"Faltan filas de {model} para rho={rho:.6f}")
-                color = density_color(rho, densities)
-                xs, ys = [row["mean_S"] for row in selected], [row["mean_va"] for row in selected]
-                ax.errorbar(xs, ys, xerr=[row["std_S"] for row in selected],
-                            yerr=[row["std_va"] for row in selected], color=color, marker="o",
-                            linestyle="-", capsize=3, linewidth=1.3, markersize=5.5,
-                            label=rf"$\rho={density_label(rho)}$")
-            ax.set_xlabel(r"Fracción gigante $S$")
-            ax.set_ylim(-0.02, 1.05)
-            style_axis(ax)
-            ax.legend(frameon=False)
-            if title:
-                ax.set_title(title)
-        axes[0].set_ylabel(r"Polarización $v_a$")
+        all_densities = [rho for _, densities in groups for rho in densities]
+        fig, ax = plt.subplots(figsize=(7.5, 6.2))
+        for rho in all_densities:
+            density_rows = rows_for_density(rows, rho)
+            selected = sorted((row for row in density_rows if row["model"] == model), key=lambda row: row["eta"])
+            if not selected:
+                sys.exit(f"Faltan filas de {model} para rho={rho:.6f}")
+            color = density_color(rho, all_densities)
+            xs, ys = [row["mean_S"] for row in selected], [row["mean_va"] for row in selected]
+            ax.errorbar(xs, ys, xerr=[row["std_S"] for row in selected],
+                        yerr=[row["std_va"] for row in selected], color=color, marker="o",
+                        linestyle="-", capsize=3, linewidth=1.3, markersize=5.5,
+                        label=rf"$\rho={density_label(rho)}$")
+        ax.set_xlabel(r"Fracción gigante $S$")
+        ax.set_ylabel(r"Polarización $v_a$")
+        ax.set_ylim(-0.02, 1.05)
+        style_axis(ax)
+        ax.legend(frameon=False, ncol=2 if len(all_densities) > 3 else 1)
 
     fig.suptitle("Polarización y componente gigante")
     finish_figure(fig, args.out)

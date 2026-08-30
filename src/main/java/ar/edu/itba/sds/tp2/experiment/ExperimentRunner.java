@@ -151,6 +151,17 @@ public final class ExperimentRunner {
     private ExperimentPoint runCombination(FlockingModel model, double rho, double eta) {
         List<Double> vaSamples = new ArrayList<>(repetitions);
         List<Double> sSamples = new ArrayList<>(repetitions);
+        // Pool de TODOS los valores instantaneos va(t)/S(t) (t en la ventana estacionaria) de las
+        // `repetitions` corridas, sin promediar cada repeticion primero. El desvio reportado sale
+        // de aca (ver mas abajo), no del desvio entre las `repetitions` medias por repeticion:
+        // promediar cada repeticion sobre toda la ventana estacionaria (potencialmente miles de
+        // pasos) da una estimacion por repeticion carisima precisa, y el desvio ENTRE esas medias
+        // ya-suavizadas colapsa a casi cero en regimenes ordenados/alta densidad (mucho
+        // autopromediado), aunque el observable siga fluctuando de verdad paso a paso. El desvio
+        // sobre el pool de valores instantaneos captura esa fluctuacion real, que es lo que se
+        // espera ver como barra de error (asi lo tiene el grupo con el que comparamos).
+        List<Double> vaPooled = new ArrayList<>();
+        List<Double> sPooled = new ArrayList<>();
         int n = 0;
         int missedSteadyState = 0;
 
@@ -180,6 +191,8 @@ public final class ExperimentRunner {
 
             vaSamples.add(average(result.va(), start));
             sSamples.add(average(result.s(), start));
+            vaPooled.addAll(result.va().subList(start, result.va().size()));
+            sPooled.addAll(result.s().subList(start, result.s().size()));
         }
 
         if (missedSteadyState > 0) {
@@ -190,10 +203,13 @@ public final class ExperimentRunner {
             }
         }
 
+        // mean_va/mean_S: promedio de las medias por repeticion (estimador estandar del valor
+        // estacionario). std_va/std_S: desvio sobre el pool de valores instantaneos (ver arriba),
+        // NO sobre vaSamples/sSamples -- son dos cantidades distintas a proposito.
         return new ExperimentPoint(
                 model, rho, eta, n, repetitions,
-                mean(vaSamples), stdDev(vaSamples),
-                mean(sSamples), stdDev(sSamples)
+                mean(vaSamples), stdDev(vaPooled),
+                mean(sSamples), stdDev(sPooled)
         );
     }
 

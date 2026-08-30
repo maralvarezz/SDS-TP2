@@ -100,27 +100,25 @@ def main():
             axes_flat[0].set_ylabel(r"Fracción gigante $S$")
             axes_flat[-1].legend(frameon=False)
     else:
-        # Un solo modelo: un panel por estudio, densidades juntas coloreadas por rho.
+        # Un solo modelo: TODAS las densidades pedidas (sean de uno o de los dos estudios) van
+        # juntas en un unico panel, coloreadas por rho -- formato calcado del otro grupo.
         model = selected_models[0]
-        fig, axes = plt.subplots(1, len(groups), figsize=(6.5 * len(groups), 5.5), squeeze=False)
-        axes = axes[0]
-        for ax, (title, densities) in zip(axes, groups):
-            for rho in densities:
-                density_rows = rows_for_density(rows, rho)
-                selected = sorted((row for row in density_rows if row["model"] == model), key=lambda row: row["eta"])
-                if not selected:
-                    sys.exit(f"Faltan filas de {model} para rho={rho:.6f}")
-                color = density_color(rho, densities)
-                ax.errorbar([row["eta"] for row in selected], [row["mean_S"] for row in selected],
-                            yerr=[row["std_S"] for row in selected], color=color, marker="o",
-                            linestyle="-", capsize=3, linewidth=1.3, markersize=4.5,
-                            label=rf"$\rho={density_label(rho)}$")
-            ax.set_xlabel(r"Ruido $\eta$")
-            style_axis(ax)
-            ax.legend(frameon=False)
-            if title:
-                ax.set_title(title)
-        axes[0].set_ylabel(r"Fracción gigante $S$")
+        all_densities = [rho for _, densities in groups for rho in densities]
+        fig, ax = plt.subplots(figsize=(7.5, 5.8))
+        for rho in all_densities:
+            density_rows = rows_for_density(rows, rho)
+            selected = sorted((row for row in density_rows if row["model"] == model), key=lambda row: row["eta"])
+            if not selected:
+                sys.exit(f"Faltan filas de {model} para rho={rho:.6f}")
+            color = density_color(rho, all_densities)
+            ax.errorbar([row["eta"] for row in selected], [row["mean_S"] for row in selected],
+                        yerr=[row["std_S"] for row in selected], color=color, marker="o",
+                        linestyle="-", capsize=3, linewidth=1.3, markersize=4.5,
+                        label=rf"$\rho={density_label(rho)}$")
+        ax.set_xlabel(r"Ruido $\eta$")
+        ax.set_ylabel(r"Fracción gigante $S$")
+        style_axis(ax)
+        ax.legend(frameon=False, ncol=2 if len(all_densities) > 3 else 1)
 
     fig.suptitle("Componente gigante en función del ruido")
     finish_figure(fig, args.out)
