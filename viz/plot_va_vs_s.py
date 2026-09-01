@@ -94,7 +94,10 @@ def main():
             selected = sorted((row for row in density_rows if row["model"] == model), key=lambda row: row["eta"])
             if not selected:
                 sys.exit(f"Faltan filas de {model} para rho={rho:.6f}")
-            color = density_color(rho, all_densities)
+            # Color por indice dentro de TODAS las densidades posibles (no solo las que van en
+            # este panel) -- mismo criterio que plot_va_vs_eta.py / plot_s_vs_eta.py, asi rho=2
+            # es siempre azul, rho=8 siempre verde, etc. sea que se filtren densidades con --rho.
+            color = density_color(rho, ALL_CLUSTER_DENSITIES)
             if multi_model:
                 style = MODEL_STYLE[model]
                 marker, linestyle = style["marker"], style["linestyle"]
@@ -102,13 +105,16 @@ def main():
             else:
                 marker, linestyle = "o", "-"
                 label = rf"$\rho={density_label(rho)}$"
-            xs, ys = [row["mean_S"] for row in selected], [row["mean_va"] for row in selected]
-            ax.errorbar(xs, ys, xerr=[row["std_S"] for row in selected],
-                        yerr=[row["std_va"] for row in selected], color=color, marker=marker,
+            xs, ys = [row["mean_va"] for row in selected], [row["mean_S"] for row in selected]
+            # Ejes invertidos: va en x, S en y. Solo barras de error en S (ahora verticales, yerr)
+            # -- con las dos a la vez el grafico se llenaba de cruces superpuestas entre curvas y
+            # quedaba dificil de leer; el eje de va ya se puede leer sin barra propia gracias a la
+            # linea que conecta los puntos en orden de eta creciente.
+            ax.errorbar(xs, ys, yerr=[row["std_S"] for row in selected], color=color, marker=marker,
                         linestyle=linestyle, capsize=3, linewidth=1.3, markersize=5.5, label=label)
-    ax.set_xlabel(r"Fracción gigante $S$")
-    ax.set_ylabel(r"Polarización $v_a$")
-    ax.set_ylim(-0.02, 1.05)
+    ax.set_xlabel(r"Polarización $v_a$")
+    ax.set_ylabel(r"Fracción gigante $S$")
+    ax.set_xlim(-0.02, 1.05)
     style_axis(ax)
     ax.legend(frameon=False, ncol=2 if (multi_model or len(all_densities) > 3) else 1)
     fig.suptitle("Polarización y componente gigante")

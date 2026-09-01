@@ -89,7 +89,10 @@ def main():
             selected = sorted((row for row in density_rows if row["model"] == model), key=lambda row: row["eta"])
             if not selected:
                 sys.exit(f"Faltan filas de {model} para rho={rho:.6f}")
-            color = density_color(rho, all_densities)
+            # Color por indice dentro de TODAS las densidades posibles (no solo las que van en
+            # este panel) -- mismo criterio que plot_va_vs_eta.py, asi rho=2 es siempre azul,
+            # rho=4 naranja, etc. sea que se filtren densidades con --rho o no.
+            color = density_color(rho, ALL_CLUSTER_DENSITIES)
             if multi_model:
                 style = MODEL_STYLE[model]
                 marker, linestyle = style["marker"], style["linestyle"]

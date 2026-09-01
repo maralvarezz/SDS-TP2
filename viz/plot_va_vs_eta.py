@@ -99,7 +99,11 @@ def main():
             selected = sorted((row for row in density_rows if row["model"] == model), key=lambda row: row["eta"])
             if not selected:
                 sys.exit(f"Faltan filas de {model} para rho={rho:.6f}")
-            color = density_color(rho, all_densities)
+            # Color por indice dentro de TODAS las densidades posibles (no solo las que van en
+            # este panel) -- asi rho=2 es siempre azul, rho=4 naranja, etc., sea que el grafico
+            # traiga las 6 juntas (--densities=all) o se haya separado en rho>1 / rho<1: el color
+            # de cada densidad tiene que ser el mismo en todos los graficos del informe.
+            color = density_color(rho, ALL_CLUSTER_DENSITIES)
             if multi_model:
                 style = MODEL_STYLE[model]
                 marker, linestyle = style["marker"], style["linestyle"]
@@ -115,7 +119,16 @@ def main():
     ax.set_ylim(-0.02, 1.05)
     style_axis(ax)
     ax.legend(frameon=False, ncol=2 if (multi_model or len(all_densities) > 3) else 1)
-    fig.suptitle("Polarización en función del ruido")
+    # Subtitulo por regimen de densidad cuando el grafico se separa en dos (rho>1 vs rho<1) --
+    # con --densities=all (los dos juntos, para comparar contra el otro grupo) se deja el titulo
+    # generico de siempre.
+    if args.densities == "polarization":
+        subtitle = r" ($\rho > 1$)"
+    elif args.densities == "cluster":
+        subtitle = r" ($\rho < 1$)"
+    else:
+        subtitle = ""
+    fig.suptitle(f"Polarización en función del ruido{subtitle}")
     finish_figure(fig, args.out)
 
 

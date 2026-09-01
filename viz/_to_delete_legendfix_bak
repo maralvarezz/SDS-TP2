@@ -132,12 +132,7 @@ def main():
 
     for ax in (ax_va, ax_s):
         style_axis(ax)
-    # Leyenda solo en el panel de arriba (es la misma serie que abajo, repetirla es redundante) y
-    # AFUERA del area de datos -- adentro, con loc="best", varias corridas (sobre todo eta chico o
-    # el votante) tienen las curvas ocupando casi todo el panel y la leyenda termina tapando datos
-    # sea donde sea que caiga.
-    ax_va.legend(frameon=False, ncol=2 if (args.group_by == "compare" and len(series) > 3) else 1,
-                 loc="upper left", bbox_to_anchor=(1.01, 1.0), borderaxespad=0.0)
+        ax.legend(frameon=False, ncol=2 if (args.group_by == "compare" and len(series) > 3) else 1)
     metadata = series[0][1]
     if args.group_by == "model":
         fig.suptitle(f"Evolución temporal · ρ={fmt_num(metadata.get('rho', '?'))} · η={fmt_num(metadata.get('eta', '?'))}")

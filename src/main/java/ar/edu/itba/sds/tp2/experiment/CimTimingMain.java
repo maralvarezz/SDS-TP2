@@ -36,12 +36,21 @@ import java.util.OptionalLong;
  * medicion.
  * <p>
  * Antes de medir en serio se hace un WARM-UP: se llama a findNeighbours varios miles de veces
- * sobre un sistema descartable, sin registrar esos tiempos. Al correr las 90 mediciones dentro de
+ * sobre un sistema descartable, sin registrar esos tiempos. Al correr las mediciones dentro de
  * un unico proceso Java (a diferencia de TP1, que lanza una JVM nueva por corrida), las primeras
  * llamadas caen en modo interpretado -- el JIT de HotSpot todavia no compilo el codigo caliente --
  * lo que antes se vio como tiempos anomalos (incluso no monotonos) justo en los N mas chicos. El
  * warm-up hace que esa transicion ya haya pasado antes de que arranque la medicion real, para que
  * la curva completa (desde N=10) sea representativa.
+ * <p>
+ * N_VALUES se densifico (10 a 5000, 22 puntos) para que la comparacion log-log con TP1 tenga mas
+ * puntos donde importa (N&gt;=500, la zona donde TP1 vs TP2 son comparables -- ver
+ * viz/compare_cim_timing.py y su flag --n-min). Los puntos chicos (10-200) se mantienen para no
+ * perder esa parte de la curva, aunque en la comparacion con TP1 se filtren con --n-min.
+ * <p>
+ * Los 10 puntos de N&gt;=500 estan espaciados LOGARITMICAMENTE: son N0*r^k con razon
+ * r=10^(1/9) (~1.2915), o sea 0.111 decadas parejas entre cada uno en el eje log-log del grafico
+ * de comparacion (ver viz/compare_cim_timing.py).
  */
 public final class CimTimingMain {
 
@@ -51,7 +60,9 @@ public final class CimTimingMain {
     private static final double RC = 1.0;
     private static final double RADIUS_MIN = 0.23;
     private static final double RADIUS_MAX = 0.26;
-    private static final List<Integer> N_VALUES = List.of(10, 20, 50, 100, 200, 500, 1000, 2000, 5000);
+    private static final List<Integer> N_VALUES = List.of(
+            10, 20, 50, 100, 200,
+            500, 646, 834, 1077, 1391, 1797, 2321, 2997, 3871, 5000);
     private static final int RUNS_PER_VALUE = 10;
     private static final int WARMUP_N = 200;
     private static final int WARMUP_ITERATIONS = 5000;
