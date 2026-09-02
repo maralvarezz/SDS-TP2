@@ -103,7 +103,22 @@ def main():
     animation = FuncAnimation(fig, update, frames=len(frames), interval=1000 / args.fps, blit=False)
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)
-        writer = FFMpegWriter(fps=args.fps, bitrate=2400) if args.out.suffix.lower() == ".mp4" else PillowWriter(fps=args.fps)
+        if args.out.suffix.lower() == ".mp4":
+            # libx264 exige ancho y alto en PIXELES pares (submuestreo de croma yuv420p) --
+            # figsize (pulgadas) x dpi no siempre da un entero par (ej. a Olivia le dio 1483x1080,
+            # ancho impar) y ffmpeg tira "width not divisible by 2" y aborta sin escribir nada.
+            # Se ajusta el ancho/alto de la figura una fraccion minima de pulgada (menos de un
+            # pixel) para que el redondeo final quede en un numero par, para CUALQUIER combinacion
+            # de figsize/--dpi, no solo para el tamaño que probamos nosotros.
+            width_px = round(fig.get_figwidth() * args.dpi)
+            height_px = round(fig.get_figheight() * args.dpi)
+            if width_px % 2:
+                fig.set_figwidth(fig.get_figwidth() + 1.0 / args.dpi)
+            if height_px % 2:
+                fig.set_figheight(fig.get_figheight() + 1.0 / args.dpi)
+            writer = FFMpegWriter(fps=args.fps, bitrate=2400)
+        else:
+            writer = PillowWriter(fps=args.fps)
         animation.save(args.out, writer=writer, dpi=args.dpi)
         plt.close(fig)
         print(f"Animación guardada en {args.out}")
