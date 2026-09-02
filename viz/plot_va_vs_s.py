@@ -117,7 +117,8 @@ def main():
     ax.set_xlim(-0.02, 1.05)
     style_axis(ax)
     ax.legend(frameon=False, ncol=2 if (multi_model or len(all_densities) > 3) else 1)
-    fig.suptitle("Polarización y componente gigante")
+    # Sin titulo en la propia figura -- va como caption/encabezado de seccion en la presentacion
+    # e informe, no duplicado adentro de la figura (mismo criterio que el resto de viz/).
     finish_figure(fig, args.out)
 
 

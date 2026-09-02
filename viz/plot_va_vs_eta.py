@@ -119,16 +119,8 @@ def main():
     ax.set_ylim(-0.02, 1.05)
     style_axis(ax)
     ax.legend(frameon=False, ncol=2 if (multi_model or len(all_densities) > 3) else 1)
-    # Subtitulo por regimen de densidad cuando el grafico se separa en dos (rho>1 vs rho<1) --
-    # con --densities=all (los dos juntos, para comparar contra el otro grupo) se deja el titulo
-    # generico de siempre.
-    if args.densities == "polarization":
-        subtitle = r" ($\rho > 1$)"
-    elif args.densities == "cluster":
-        subtitle = r" ($\rho < 1$)"
-    else:
-        subtitle = ""
-    fig.suptitle(f"Polarización en función del ruido{subtitle}")
+    # Sin titulo en la propia figura -- va como caption/encabezado de seccion en la presentacion
+    # e informe, no duplicado adentro de la figura (mismo criterio que el resto de viz/).
     finish_figure(fig, args.out)
 
 

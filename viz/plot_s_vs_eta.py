@@ -107,7 +107,8 @@ def main():
     ax.set_ylabel(r"Fracción gigante $S$")
     style_axis(ax)
     ax.legend(frameon=False, ncol=2 if (multi_model or len(all_densities) > 3) else 1)
-    fig.suptitle("Componente gigante en función del ruido")
+    # Sin titulo en la propia figura -- va como caption/encabezado de seccion en la presentacion
+    # e informe, no duplicado adentro de la figura (mismo criterio que el resto de viz/).
     finish_figure(fig, args.out)
 
 

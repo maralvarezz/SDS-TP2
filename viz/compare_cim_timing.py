@@ -221,7 +221,7 @@ def main():
 
         colors = {"VICSEK": "tab:blue", "VOTER": "tab:orange"}
         markers = {"VICSEK": "s", "VOTER": "^"}
-        labels_es = {"VICSEK": "estándar", "VOTER": "votante"}
+        labels_es = {"VICSEK": "vicsek", "VOTER": "votante"}
         for model in sorted(by_model):
             grouped = by_model[model]
             ns = sorted(grouped)
@@ -257,9 +257,9 @@ def main():
         ax.set_yscale("log")
         ax.set_xlabel("N (escala log)")
         ax.set_ylabel(f"Tiempo CIM {center_label} (ms, escala log)")
-    title = ("Tiempos de ejecucion del CIM: TP1 vs TP2 (L=10, rc=1, periodico)" if args.tp2_by_model
-              else "Tiempos de ejecucion del CIM: TP1 vs TP2 (densidad fija, rc=1, periodico)")
-    ax.set_title(title)
+    # Sin titulo en el propio grafico -- va como caption/encabezado de seccion en la presentacion
+    # e informe (ver Formato_Presentaciones.pdf / Formato_Informes.pdf), no duplicado adentro de
+    # la figura.
     ax.grid(alpha=0.3, which="both")
     ax.legend()
     fig.tight_layout()

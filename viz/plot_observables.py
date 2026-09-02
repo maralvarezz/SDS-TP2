@@ -111,7 +111,7 @@ def main():
                 ax.axvline(args.stationary_t[index], color=color, linestyle=":", linewidth=1.2)
     ax_va.set_ylabel(r"Polarización $v_a$")
     ax_s.set_ylabel(r"Fracción gigante $S$")
-    ax_s.set_xlabel("Tiempo t")
+    ax_s.set_xlabel(r"Tiempo $t$")
 
     # El panel de va se escala al maximo observado (con margen), no fijo 0-1.02 -- en corridas
     # del votante (o eta alto) va nunca se acerca a 1, y con el rango completo fijo la curva
@@ -138,17 +138,9 @@ def main():
     # sea donde sea que caiga.
     ax_va.legend(frameon=False, ncol=2 if (args.group_by == "compare" and len(series) > 3) else 1,
                  loc="upper left", bbox_to_anchor=(1.01, 1.0), borderaxespad=0.0)
-    metadata = series[0][1]
-    if args.group_by == "model":
-        fig.suptitle(f"Evolución temporal · ρ={fmt_num(metadata.get('rho', '?'))} · η={fmt_num(metadata.get('eta', '?'))}")
-    elif args.group_by == "rho":
-        fig.suptitle(f"Evolución temporal · modelo={metadata.get('model', '?')} · η={fmt_num(metadata.get('eta', '?'))}")
-    elif args.group_by == "compare":
-        fig.suptitle(f"Evolución temporal · Vicsek vs Votante · η={fmt_num(metadata.get('eta', '?'))}")
-    else:
-        models = {m.get("model", "?") for _, m, _ in series}
-        model_label = models.pop() if len(models) == 1 else "/".join(sorted(models))
-        fig.suptitle(f"Evolución temporal · modelo={model_label} · casos característicos")
+    # Sin titulo en la propia figura -- va como caption/encabezado de seccion en la presentacion
+    # e informe (ver Formato_Presentaciones.pdf / Formato_Informes.pdf), no duplicado adentro de
+    # la figura (mismo criterio que viz/compare_cim_timing.py).
     finish_figure(fig, args.out)
 
 

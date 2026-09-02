@@ -129,7 +129,9 @@ public final class CimTimingMain {
         SimulationConfig config = new SimulationConfig(
                 n, l, m, RC, RADIUS_MIN, RADIUS_MAX, true, OptionalLong.of(1000L + seedOffset), "random",
                 Path.of("unused"), Path.of("unused"), Path.of("unused"), Path.of("unused"),
-                1, false, "python3", Path.of("unused"), Path.of("unused"), Path.of("unused")
+                1, false, "python3", Path.of("unused"), Path.of("unused"), Path.of("unused"),
+                true, WARMUP_N, WARMUP_ITERATIONS,
+                false, "n", List.of(), 1, Path.of("unused"), Path.of("unused")
         );
         StaticSystem staticSystem = ParticleGenerator.generateStaticSystem(config);
         return ParticleGenerator.generateDynamicParticles(staticSystem, config);

@@ -106,6 +106,15 @@ public final class FlockingParticleGenerator {
                 "python3",
                 Path.of("unused"),
                 Path.of("unused"),
+                Path.of("unused"),
+                false,
+                0,
+                0,
+                false,
+                "n",
+                List.of(),
+                1,
+                Path.of("unused"),
                 Path.of("unused")
         );
     }
