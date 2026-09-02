@@ -32,16 +32,11 @@ def main():
     frames = frames[::args.stride]
     arrow_length = args.arrow_length or box_size * 0.04
 
-    # El panel lateral de datos (modelo, rho, eta, t) es un SUBPLOT propio (no texto flotante
-    # sobre la figura) -- con fig.text() + tight_layout(rect=...) el margen izquierdo terminaba
-    # mal calculado y se recortaba la escala del eje y (el "10" de arriba aparecia cortado).
-    # Reservando una columna real con GridSpec, tight_layout() conoce su bbox y calcula los
-    # margenes de la grilla principal (incluida la colorbar) sin recortar nada.
-    # El panel lateral de datos (modelo, rho, eta, t) es un SUBPLOT propio (no texto flotante
-    # sobre la figura), con margenes FIJOS en el GridSpec (left/right/top/bottom) en vez de dejar
-    # que fig.tight_layout() los calcule: con ax.set_aspect("equal") tight_layout tira el warning
-    # "Axes that are not compatible with tight_layout" y el resultado terminaba con la escala del
-    # eje y recortada. Con margenes fijos el layout es 100% predecible y no depende de ese motor.
+    # El panel lateral de datos (modelo + parametros fijos + t) es un SUBPLOT propio (no texto
+    # flotante sobre la figura), con margenes FIJOS en el GridSpec (left/right/top/bottom) en vez
+    # de dejar que fig.tight_layout() los calcule: con ax.set_aspect("equal") tight_layout tira el
+    # warning "Axes that are not compatible with tight_layout" y el resultado terminaba con la
+    # escala del eje y recortada. Con margenes fijos el layout es 100% predecible.
     fig = plt.figure(figsize=(9.9, 7.2))
     gs = fig.add_gridspec(1, 2, width_ratios=[4.3, 1.15], wspace=0.30,
                           left=0.07, right=0.965, top=0.95, bottom=0.09)
@@ -79,24 +74,34 @@ def main():
             return f"{float(value):g}"
         except (TypeError, ValueError):
             return value
+    n = fmt_num(metadata.get("n", "?"))
+    l = fmt_num(metadata.get("l", "?"))
+    rc = fmt_num(metadata.get("rc", "?"))
+    v0 = fmt_num(metadata.get("v0", "?"))
+    dtsim = fmt_num(metadata.get("dt", "?"))
     rho, eta = fmt_num(metadata.get("rho", "?")), fmt_num(metadata.get("eta", "?"))
 
-    # Parametros de la corrida (modelo, rho, eta, t) en un unico bloque de texto con recuadro,
-    # centrado en el panel lateral -- antes eran dos ax_info.text() sueltos flotando en un area
-    # muy alta, con mucho espacio vacio arriba/abajo, lo que se veia desprolijo. El recuadro
-    # agrupa visualmente todo como una sola "ficha" de parametros, tal como pide la guia de
-    # presentaciones (1.7): la config del sistema descripta al costado de la figura.
+    # Parametros de la corrida en un unico bloque de texto con recuadro, centrado en el panel
+    # lateral -- ademas de rho/eta/t van TODOS los parametros fijos de la configuracion (N, L,
+    # rc, v0, dt), tal como pide la guia de presentaciones (1.7): "la informacion correspondiente
+    # a la configuracion del sistema (parametros fijos) deben estar descriptas al costado de la
+    # figura. Es decir cuales fueron las condiciones particulares bajo las cuales se obtuvieron
+    # esos resultados." t va aparte del bloque fijo porque es lo unico que cambia cuadro a cuadro.
+    fixed_lines = "\n".join([
+        model, "",
+        f"N = {n}", rf"$L = {l}$", rf"$r_c = {rc}$", rf"$v_0 = {v0}$", rf"$\Delta t = {dtsim}$", "",
+        rf"$\rho = {rho}$", rf"$\eta = {eta}$",
+    ])
     info_box = dict(boxstyle="round,pad=0.7", facecolor="#f7f7f7", edgecolor="#999999", linewidth=1.0)
     info_text = ax_info.text(0.5, 0.5, "", transform=ax_info.transAxes, ha="center", va="center",
-                             fontsize=13, linespacing=2.0, bbox=info_box)
+                             fontsize=11.5, linespacing=1.7, bbox=info_box)
 
     def update(index):
         t, rows = frames[index]
         x, y, u, v, angles = components(rows)
         quiver.set_offsets(list(zip(x, y)))
         quiver.set_UVC(u, v, angles)
-        info_text.set_text(f"{model}\n\n" + rf"$\rho = {rho}$" + "\n" + rf"$\eta = {eta}$"
-                            + "\n\n" + f"t = {t}")
+        info_text.set_text(fixed_lines + "\n\n" + f"t = {t}")
         return (quiver,)
 
     update(0)
