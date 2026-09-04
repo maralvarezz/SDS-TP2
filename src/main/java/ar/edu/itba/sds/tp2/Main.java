@@ -21,27 +21,6 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
-/**
- * Corrida de punta a punta: arma estado(0), corre `steps` pasos con la regla configurada
- * (Vicsek o votante), y en cada paso mide va y S sobre estado(t) antes de avanzar a estado(t+1).
- * Al final escribe todo a output/observables.txt.
- * <p>
- * El objetivo por ahora es puramente exploratorio: graficar va(t) y S(t) con
- * viz/plot_observables.py para elegir a ojo, mirando el grafico, a partir de que t el sistema
- * entra en estado estacionario (punto b del enunciado). Todavia no es el runner que barre
- * modelo x densidad x eta -- eso es la proxima capa.
- * <p>
- * Acepta un flag extra, --initial-state=random|colliding (o --generator=random|clusters,
- * por compatibilidad; default random), que NO pasa por
- * FlockingConfigLoader (se saca de los args antes) porque no es un parametro fisico del
- * enunciado -- es solo para elegir el estado inicial:
- * - random (default): el de siempre, N particulas dispersas al azar en toda la caja. Es lo que
- *   usan ExperimentRunner y CimTimingMain (sin pasar por este flag, asi que no se ven afectados).
- * - clusters: SOLO para demos/animaciones -- arma dos masas compactas que arrancan viajando una
- *   hacia la otra (ver FlockingParticleGenerator.generateCollidingClusters), para que
- *   viz/animate_trajectory.py muestre un choque/fusion de bandadas bien visible en vez de
- *   particulas dispersas desde el arranque.
- */
 public final class Main {
 
     private Main() {

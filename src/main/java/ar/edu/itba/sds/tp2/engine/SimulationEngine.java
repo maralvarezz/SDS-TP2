@@ -12,16 +12,6 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
-/**
- * Cierra el ciclo del diagrama: estado(t) -> CIM del TP1 -> Map(id, vecinos) -> regla de
- * direccion (Vicsek/votante) -> estado(t+1). No hace I/O, no calcula observables, y tampoco
- * genera el estado inicial -- eso vive en ar.edu.itba.sds.tp2.generator.FlockingParticleGenerator
- * -- para poder testear la fisica pura de forma aislada.
- *
- * Reutiliza el record Particle(id, x, y, radius, property) de TP1 tal cual: radius = 0 (particulas
- * puntuales, el corte de interaccion queda en rc solo) y property se usa para guardar el angulo
- * theta de la velocidad.
- */
 public final class SimulationEngine {
 
     private final FlockingConfig config;
@@ -34,19 +24,10 @@ public final class SimulationEngine {
         this.random = random;
     }
 
-    /**
-     * Vecinos de cada particula segun el CIM de TP1, con contorno periodico (fijo por enunciado).
-     * Se expone aparte de step() porque el calculo de clusters (punto d del TP) necesita el mismo
-     * Map(id, vecinos) del mismo instante, y no tiene sentido correr el CIM dos veces por paso.
-     */
     public Map<Integer, Set<Integer>> findNeighbours(List<Particle> state) {
         return CellIndexMethod.findNeighbours(state, config.l(), config.cellsPerSide(), config.rc(), true);
     }
 
-    /**
-     * Un paso de la simulacion: aplica la regla de direccion configurada (Vicsek o votante) y
-     * despues mueve cada particula a rapidez constante v0, con wraparound periodico en la caja.
-     */
     public List<Particle> step(List<Particle> state, Map<Integer, Set<Integer>> neighbours) {
         Map<Integer, Particle> particlesById = new HashMap<>();
         for (Particle particle : state) {

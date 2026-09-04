@@ -8,11 +8,6 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
-/**
- * Modelo de votante [2]: a diferencia de Vicsek, la particula NO promedia -- elige al azar a un
- * solo vecino dentro de rc y copia directamente su direccion, mas el termino de ruido. Si no
- * tiene vecinos, no hay a quien copiar y conserva su propia direccion.
- */
 public final class VoterRule implements DirectionRule {
 
     @Override

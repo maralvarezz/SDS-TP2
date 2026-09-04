@@ -14,44 +14,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.OptionalLong;
 
-/**
- * Punto (g) del enunciado: medir tiempos de ejecucion del CIM para compararlos con TP1.
- * <p>
- * Para que la comparacion en escala log-log tenga sentido, se barre N en un rango amplio
- * (10 a 5000, espaciado aprox. logaritmico) manteniendo la DENSIDAD fija en vez del lado L fijo:
- * si L quedara fijo, al aumentar N tambien aumentaria la densidad de particulas, y el tiempo del
- * CIM dejaria de reflejar solo el efecto de N (se sumaria el efecto de mas vecinos por particula).
- * Con densidad fija, L y M escalan junto con N (L = L0*sqrt(N/N0), M = floor(M0*L/L0)) y el largo
- * de celda se mantiene siempre por encima del minimo requerido.
- * <p>
- * El largo de celda minimo no es simplemente rc: como estas particulas tienen radio (no son
- * puntuales, a diferencia del escenario de bandadas de TP2), ConfigValidator.validateGeometry de
- * TP1 exige cellLength >= rc + 2*radiusMax = 1 + 2*0.26 = 1.52 (la interaccion se mide entre
- * superficies, no entre centros). Los valores base (L0=20, M0=13, N0=100, rc=1) dan un largo de
- * celda de ~1.54 en el punto de referencia, el M mas grande que TP1 acepta para L=20 con estos
- * radios (confirmado por el propio mensaje de error de TP1: "M maximo permitido: 13").
- * <p>
- * Llama a CellIndexMethod.findNeighbours() directo (lo mismo que envuelve
- * SimulationEngine.findNeighbours() puertas adentro) para no meter overhead de mas en la
- * medicion.
- * <p>
- * Antes de medir en serio se hace un WARM-UP: se llama a findNeighbours varios miles de veces
- * sobre un sistema descartable, sin registrar esos tiempos. Al correr las mediciones dentro de
- * un unico proceso Java (a diferencia de TP1, que lanza una JVM nueva por corrida), las primeras
- * llamadas caen en modo interpretado -- el JIT de HotSpot todavia no compilo el codigo caliente --
- * lo que antes se vio como tiempos anomalos (incluso no monotonos) justo en los N mas chicos. El
- * warm-up hace que esa transicion ya haya pasado antes de que arranque la medicion real, para que
- * la curva completa (desde N=10) sea representativa.
- * <p>
- * N_VALUES se densifico (10 a 5000, 22 puntos) para que la comparacion log-log con TP1 tenga mas
- * puntos donde importa (N&gt;=500, la zona donde TP1 vs TP2 son comparables -- ver
- * viz/compare_cim_timing.py y su flag --n-min). Los puntos chicos (10-200) se mantienen para no
- * perder esa parte de la curva, aunque en la comparacion con TP1 se filtren con --n-min.
- * <p>
- * Los 10 puntos de N&gt;=500 estan espaciados LOGARITMICAMENTE: son N0*r^k con razon
- * r=10^(1/9) (~1.2915), o sea 0.111 decadas parejas entre cada uno en el eje log-log del grafico
- * de comparacion (ver viz/compare_cim_timing.py).
- */
 public final class CimTimingMain {
 
     private static final double BASE_L = 20.0;

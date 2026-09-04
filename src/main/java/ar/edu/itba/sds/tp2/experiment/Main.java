@@ -2,9 +2,6 @@ package ar.edu.itba.sds.tp2.experiment;
 
 import java.io.IOException;
 
-/**
- * Alias corto para correr los experimentos desde exec:java sin recordar el nombre largo.
- */
 public final class Main {
 
     private Main() {

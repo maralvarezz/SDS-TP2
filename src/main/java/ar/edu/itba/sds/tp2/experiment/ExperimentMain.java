@@ -9,34 +9,6 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.OptionalInt;
 
-/**
- * Punto de entrada del barrido masivo de experimentos (puntos c, d, e, f del enunciado). A
- * diferencia de Main (que corre UNA combinacion para explorar/debuggear a mano con
- * viz/plot_observables.py), esto corre TODAS las combinaciones necesarias para armar los
- * graficos finales y escribe el CSV agregado que consume viz/.
- * <p>
- * Las constantes DEFAULT_* son la definicion "de verdad" del experimento -- se editan directo
- * aca si el equipo decide cambiar la grilla de eta, rc, etc. Para probar rapido sin editar
- * codigo hay flags opcionales por linea de comandos:
- * <pre>
- *   --quick               steps=300, repetitions=1, eta en 6 puntos en vez de 11 (prueba end-to-end rapida)
- *   --steps=N             pisa DEFAULT_STEPS
- *   --repetitions=N       pisa DEFAULT_REPETITIONS
- *   --initial-state=MODE  random o colliding
- *   --model=MODEL         VICSEK, VOTER o ALL
- *   --densities=SCOPE     polarization, cluster o all (default all) -- para correr solo uno de
- *                         los dos barridos, ej. al comparar contra otro grupo que solo corre
- *                         rho=2,4,8 y no le interesan las densidades de cluster
- *   --stationary-from=N   en vez de usar el SteadyStateDetector, promedia siempre desde el paso
- *                         N fijo (equivalente al --stationary-from + --no-dynamic de otros
- *                         grupos que no usan deteccion dinamica) -- pensado para comparaciones
- *                         en igualdad de condiciones, NO para el barrido "de verdad" del informe
- * </pre>
- * Las dos listas de densidad son intencionalmente distintas: {2,4,8} para el estudio general
- * (polarizacion, puntos b/c), {1/pi, 1/(2pi), 1/(3pi)} para el estudio de clusters (punto d y el
- * scatter va-vs-S del punto e), segun la aclaracion de la catedra -- rc es el MISMO en los dos
- * casos, no hace falta cambiarlo entre estudios.
- */
 public final class ExperimentMain {
 
     private static final double L = 10.0;
@@ -56,12 +28,6 @@ public final class ExperimentMain {
         POLARIZATION, CLUSTER, ALL
     }
 
-    // Ventana de 50 pasos, pendiente < 0.001, 5 ventanas seguidas por debajo del umbral,
-    // desvio de ventana < 0.05 y promedio de ventana a menos de 0.1 del promedio de la cola
-    // final de la corrida (ver SteadyStateDetector para el porque de cada numero: calibrado
-    // el 24/08 con dos casos reales, votante rho=8/eta=0 -- que revelo que pendiente+desvio
-    // solos no alcanzan por las mesetas locales del voter model -- y vicsek rho=4/eta=2 -- que
-    // dio el rango real de ruido a esperar en un caso con eta>0 genuino).
     private static final SteadyStateDetector STEADY_STATE_DETECTOR =
             new SteadyStateDetector(50, 1e-3, 5, 0.05, 0.1);
 

@@ -9,15 +9,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-/**
- * Escribe la evolucion temporal de los observables (t, va, S) a un archivo de texto plano, para
- * que un script de Python por fuera (viz/plot_observables.py) lo levante y grafique. Igual que en
- * TP1: la simulacion solo escribe el archivo, la parte de graficos corre aparte y a otra
- * velocidad.
- * <p>
- * Formato: un par de lineas de metadata comentadas con # (parametros de la corrida), despues un
- * header CSV, despues una fila por paso.
- */
 public final class ObservablesWriter {
 
     private ObservablesWriter() {

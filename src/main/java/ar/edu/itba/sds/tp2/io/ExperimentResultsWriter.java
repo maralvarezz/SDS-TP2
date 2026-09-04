@@ -9,11 +9,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-/**
- * Escribe los resultados agregados del ExperimentRunner a un CSV. Este es el "contrato" que
- * consumen los scripts de graficos de los puntos (c), (d), (e) y (f) -- columnas:
- * model,rho,eta,n,n_reps,mean_va,std_va,mean_S,std_S.
- */
 public final class ExperimentResultsWriter {
 
     private ExperimentResultsWriter() {

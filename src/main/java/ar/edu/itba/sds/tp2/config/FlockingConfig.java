@@ -2,10 +2,6 @@ package ar.edu.itba.sds.tp2.config;
 
 import java.util.OptionalLong;
 
-/**
- * Parametros de una corrida de bandadas. L queda fijo en 10 segun el enunciado, pero se deja
- * configurable por si hace falta para tests u otros escenarios.
- */
 public record FlockingConfig(
         int n,
         double l,
@@ -45,10 +41,6 @@ public record FlockingConfig(
         }
     }
 
-    /**
-     * Crea una configuracion a partir de la densidad rho = n / l^2, como pide el enunciado
-     * (rho = 2, 4, 8 con l = 10).
-     */
     public static FlockingConfig ofDensity(
             double rho, double l, double rc, double v0, double dt, double eta, int steps,
             FlockingModel model, OptionalLong seed
@@ -57,11 +49,6 @@ public record FlockingConfig(
         return new FlockingConfig(n, l, rc, v0, dt, eta, steps, model, seed);
     }
 
-    /**
-     * Cantidad de celdas por lado para el CIM de TP1: la celda tiene que medir al menos rc para
-     * que el metodo (que solo compara celdas vecinas hacia adelante) encuentre todos los pares
-     * dentro de rc.
-     */
     public int cellsPerSide() {
         return Math.max((int) Math.floor(l / rc), 1);
     }

@@ -7,11 +7,6 @@ import java.util.Map;
 import java.util.OptionalLong;
 import java.util.Properties;
 
-/**
- * Mismo esquema que ConfigLoader de TP1: defaults internos -> application.properties del
- * classpath -> overrides por linea de comandos (--clave=valor). rho es el parametro principal
- * (el enunciado varia densidad, no N directamente); L=10 fijo por default pero configurable.
- */
 public final class FlockingConfigLoader {
     private static final String APPLICATION_PROPERTIES = "application.properties";
 

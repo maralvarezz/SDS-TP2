@@ -21,16 +21,6 @@ import java.util.OptionalLong;
 import java.util.Random;
 import java.util.Set;
 
-/**
- * Herramienta temporal de verificacion (no forma parte de la entrega): repite EXACTAMENTE la
- * misma logica que ExperimentRunner.runCombination (mismos parametros, misma formula de semilla,
- * mismo SteadyStateDetector) para UNA sola combinacion, pero imprime el resultado de cada
- * repeticion individualmente en vez de solo el promedio. Sirve para confirmar que un std_va
- * grande en el CSV agregado viene de verdad de que las repeticiones cayeron en niveles distintos
- * (fluctuacion real entre corridas independientes, ej. cerca de una transicion) y no de un bug.
- * <p>
- * Uso: --model=VICSEK|VOTER --rho=R --eta=E (mismos L/rc/v0/dt/steps/detector que ExperimentMain).
- */
 public final class SpotCheckMain {
 
     private static final double L = 10.0;

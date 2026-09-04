@@ -3,44 +3,6 @@ package ar.edu.itba.sds.tp2.observable;
 import java.util.List;
 import java.util.OptionalInt;
 
-/**
- * Detecta a partir de que paso una serie temporal (tipicamente va(t) o S(t)) entro en estado
- * estacionario. Una ventana de tamaño windowSize se considera "estacionaria" cuando se cumplen
- * TRES condiciones a la vez, durante minConsecutiveWindows ventanas seguidas:
- * <ol>
- *     <li>pendiente (cuadrados minimos) con valor absoluto por debajo de slopeThreshold;</li>
- *     <li>desvio estandar de la ventana por debajo de maxWindowStdDev;</li>
- *     <li>el promedio de la ventana no se aleja mas de tailTolerance del promedio de la cola de
- *     la serie (el ultimo tailFraction de los pasos).</li>
- * </ol>
- * <p>
- * Las primeras dos condiciones (agregadas el 24/08) no alcanzan solas para el modelo de
- * votante con eta=0: encontramos con un caso real (rho=8, eta=0) que ese modelo puede quedarse
- * "pausado" durante muchos pasos seguidos en un nivel que todavia esta lejos del consenso final
- * (ej. va oscilando sin tendencia neta y con poco ruido alrededor de 0.36, entre t=99 y t~350),
- * antes de retomar la deriva hacia consenso -- son mesetas locales genuinas, no ruido de
- * medicion, asi que ni agrandar la ventana ni subir minConsecutiveWindows las filtra (se
- * probo hasta windowSize=300 sobre datos reales y seguian marcando falso positivo). La unica
- * forma de distinguir "meseta local" de "estado estacionario real" es compararla contra donde
- * termina la serie: por eso la tercera condicion, que ancla la ventana candidata al nivel final
- * en vez de mirar solo su forma local. Esto es valido porque el detector corre offline sobre la
- * serie ya completa (no en tiempo real), asi que conocer la cola no es trampa.
- * <p>
- * Calibracion (24/08, con datos reales): para VOTER rho=8 eta=0 la meseta falsa (nivel ~0.36,
- * cola final en 1.0) queda rechazada con cualquier tailTolerance razonable (la diferencia es
- * ~0.64); la convergencia real se detecta ahi cuando el promedio de la ventana ya esta a menos
- * de tailTolerance del nivel final (con tailTolerance=0.1, en t~488, con va ya en el orden de
- * 0.9-0.98 subiendo hacia 1.0). Para VICSEK rho=4 eta=2 (caso con ruido real, sin consenso
- * absoluto) el desvio de ventanas de 50 pasos dentro de la meseta genuina fue entre 0.009 y
- * 0.039 (media 0.018), de ahi que maxWindowStdDev tenga que ser bastante mayor a esos valores
- * (0.01 se probo primero y quedaba por debajo de casi todo ese rango, de ahi el aviso de "no
- * llego a estado estacionario" en casi todas las combinaciones con eta&gt;0 en la corrida
- * completa antes de este ajuste).
- * <p>
- * Es el criterio pensado para el runner de experimentos, que corre muchas combinaciones sin que
- * haya alguien mirando cada grafico -- se valida a ojo aparte con viz/plot_observables.py en un
- * puñado de casos caracteristicos, que es justo lo que pide mostrar el punto (b) del enunciado.
- */
 public final class SteadyStateDetector {
 
     private final int windowSize;
@@ -83,13 +45,6 @@ public final class SteadyStateDetector {
         this.tailFraction = tailFraction;
     }
 
-    /**
-     * Indice de la serie desde el cual se considera estacionaria (en este TP coincide con el t,
-     * porque las series siempre arrancan en t=0), o vacio si nunca se cumplio el criterio dentro
-     * de la corrida -- en ese caso el que llama tiene que decidir un fallback (ver
-     * ExperimentRunner) y OJO porque probablemente signifique que faltan steps para esa
-     * combinacion.
-     */
     public OptionalInt detect(List<Double> series) {
         int n = series.size();
         if (n < windowSize) {
@@ -123,9 +78,6 @@ public final class SteadyStateDetector {
         return OptionalInt.empty();
     }
 
-    /**
-     * Pendiente de la recta de cuadrados minimos ajustada a series[start .. start+windowSize).
-     */
     private double windowSlope(List<Double> series, int start) {
         double sumT = 0;
         double sumV = 0;
@@ -154,11 +106,6 @@ public final class SteadyStateDetector {
         return sum / window;
     }
 
-    /**
-     * Desvio estandar (poblacional) de series[start .. start+windowSize). Filtra el caso de una
-     * ventana ruidosa sin tendencia neta (pendiente ~0) pero que en realidad todavia esta lejos
-     * de haber convergido.
-     */
     private double windowStdDev(List<Double> series, int start) {
         double mean = windowMean(series, start, windowSize);
         double sumSquaredDiff = 0;

@@ -6,12 +6,6 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
-/**
- * Modelo estandar de Vicsek [1]: la nueva direccion es el promedio circular (via seno/coseno,
- * para no romper en el wraparound de +-pi) de las direcciones de todos los vecinos dentro de rc,
- * INCLUYENDOSE a si misma -- el CIM de TP1 no incluye self en el set de vecinos, por eso se suma
- * aparte aca -- mas un termino de ruido.
- */
 public final class VicsekAverageRule implements DirectionRule {
 
     @Override

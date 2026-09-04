@@ -14,10 +14,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
-/**
- * Escribe la trayectoria completa sin acumularla en memoria. El archivo resultante es la entrada
- * independiente de viz/animate_trajectory.py.
- */
 public final class TrajectoryWriter implements Closeable {
 
     private final BufferedWriter writer;
