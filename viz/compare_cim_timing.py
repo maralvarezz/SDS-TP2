@@ -251,12 +251,12 @@ def main():
 
     if args.linear:
         ax.set_xlabel("N")
-        ax.set_ylabel(f"Tiempo CIM {center_label} (ms)")
+        ax.set_ylabel("Tiempo CIM (ms)")
     else:
         ax.set_xscale("log")
         ax.set_yscale("log")
-        ax.set_xlabel("N (escala log)")
-        ax.set_ylabel(f"Tiempo CIM {center_label} (ms, escala log)")
+        ax.set_xlabel("N")
+        ax.set_ylabel("Tiempo CIM (ms)")
     # Sin titulo en el propio grafico -- va como caption/encabezado de seccion en la presentacion
     # e informe (ver Formato_Presentaciones.pdf / Formato_Informes.pdf), no duplicado adentro de
     # la figura.
